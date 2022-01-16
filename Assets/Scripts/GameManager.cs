@@ -5,262 +5,181 @@ using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    //ブロックに割り当てた番号０～８
-    public int[,] blockNumbers = new int[3, 3];
-    //ブロックの中の記号
-    public Text[] txtBlocks;
-
     //勝敗の結果表示
-    public Text txtMyResult;
-    public Text txtOpponentResult;
+    public Text txtMyResult, txtOpponentResult;
 
-    // Start is called before the first frame update
+    public BlockManager blockManager;
+    public Transform[] blockTrans;
+
+    public List<BlockManager> blockManagersList = new List<BlockManager>();
+
+    public GameState currentGameState;
+
     void Start()
     {
-        //すべてのブロックの中身を空にする
-        for (int i = 0; i < txtBlocks.Length; i++)
+        //ボタンを9つ生成してそれぞれのボタンに０～８の番号を割り当てる
+        for (int i = 0; i < blockTrans.Length; i++)
         {
-            txtBlocks[i].text = "";
-        }
+            //ブロックを生成
+            BlockManager block = Instantiate(blockManager, blockTrans[i]);
 
-        for (int i = 0; i < 3; i++)
+            //生成したブロックを順番にリストに追加
+            blockManagersList.Add(block);
+
+            block.SetUpButton(this);
+
+            //ブロックに番号を与える
+            block.blockNum = i;
+        }
+    }
+
+    public void OpponentTurn()
+    {
+        if(currentGameState == GameState.Play)
         {
-            for (int j = 0; j < 3; j++)
+            while (true)
             {
-                blockNumbers[i, j] = 0;
+                //ランダムに書き込むブロックを決める
+                int number = Random.Range(0, 9);
+
+                //決まった数字の場所に何も書かれていなかったら
+                if (JudgeWriting(blockManagersList[number].symbolNum))
+                {
+                    //×を書く
+                    Write(2, number);
+
+                    break;
+                }
             }
         }
+       
     }
 
-    public void OnClickMyTurn(int number)
+    //ブロックに〇×を書き込む
+    public void Write(int symbol, int blockNum)
     {
-        if (JudgeWriting(number))
-        {
-            Write(1, number);
 
-            OpponentTurn();
-        }
-    }
-    
-    void OpponentTurn()
-    {
-        while (true)
-        {
-            int number = Random.Range(0, 9);
-            if (JudgeWriting(number))
-            {
-                Write(2, number);
+        //ブロックの記号の種類を決定（〇か×か）
+        blockManagersList[blockNum].symbolNum = symbol;
 
-                break;
-            }
-        }
-    }
-
-    void Write(int symbol, int number)
-    {
-        int i = 0;
-        int j = 0;
-
-        if (number == 0)
+        if (symbol == 1)
         {
-            i = 0;
-            j = 0;
-        }
-        if (number == 1)
-        {
-            i = 0;
-            j = 1;
-        }
-        if (number == 2)
-        {
-            i = 0;
-            j = 2;
-        }
-        if (number == 3)
-        {
-            i = 1;
-            j = 0;
-        }
-        if (number == 4)
-        {
-            i = 1;
-            j = 1;
-        }
-        if (number == 5)
-        {
-            i = 1;
-            j = 2;
-        }
-        if (number == 6)
-        {
-            i = 2;
-            j = 0;
-        }
-        if (number == 7)
-        {
-            i = 2;
-            j = 1;
-        }
-        if (number == 8)
-        {
-            i = 2;
-            j = 2;
-        }
-
-        blockNumbers[i, j] = symbol;
-
-        if(symbol == 1)
-        {
-            txtBlocks[number].text = "〇";
+            blockManagersList[blockNum].txtBlock.text = "〇";
         }
         if (symbol == 2)
         {
-            txtBlocks[number].text = "×";
+            blockManagersList[blockNum].txtBlock.text = "×";
         }
 
         JudgeResult();
     }
 
+    //ブロックに書けるかどうかジャッジ
     public bool JudgeWriting(int number)
     {
-        int i = 0;
-        int j = 0;
-
-        if(number == 0)
-        {
-            i = 0;
-            j = 0;
-        }
-        if(number == 1)
-        {
-            i = 0;
-            j = 1;
-        }
-        if(number == 2)
-        {
-            i = 0;
-            j = 2;
-        }
-        if (number == 3)
-        {
-            i = 1;
-            j = 0;
-        }
-        if (number == 4)
-        {
-            i = 1;
-            j = 1;
-        }
-        if (number == 5)
-        {
-            i = 1;
-            j = 2;
-        }
-        if (number == 6)
-        {
-            i = 2;
-            j = 0;
-        }
-        if (number == 7)
-        {
-            i = 2;
-            j = 1;
-        }
-        if (number == 8)
-        {
-            i = 2;
-            j = 2;
-        }
-
-        if(blockNumbers[i,j] == 0)
+        //もし何も記号がなかったらtrueを返す
+        if (number == 0)
         {
             return true;
         }
 
         return false;
-
     }
 
+    //勝ち負けのジャッジ
     public void JudgeResult()
     {
-        if(blockNumbers[0,0] == 1 && blockNumbers[0, 1] == 1 && blockNumbers[0, 2] == 1)
+        //横がそろうパターン
+        if (blockManagersList[0].symbolNum == 1 && blockManagersList[1].symbolNum == 1 && blockManagersList[2].symbolNum == 1)
         {
-            Win();
+            currentGameState = GameState.Win;
         }
-        if (blockNumbers[1, 0] == 1 && blockNumbers[1, 1] == 1 && blockNumbers[1, 2] == 1)
+        if (blockManagersList[3].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[5].symbolNum == 1)
         {
-            Win();
+            currentGameState = GameState.Win;
         }
-        if (blockNumbers[2, 0] == 1 && blockNumbers[2, 1] == 1 && blockNumbers[2, 2] == 1)
+        if (blockManagersList[6].symbolNum == 1 && blockManagersList[7].symbolNum == 1 && blockManagersList[8].symbolNum == 1)
         {
-            Win();
-        }
-        if (blockNumbers[0, 0] == 2 && blockNumbers[0, 1] == 2 && blockNumbers[0, 2] == 2)
-        {
-            Lose();
-        }
-        if (blockNumbers[1, 0] == 2 && blockNumbers[1, 1] == 2 && blockNumbers[1, 2] == 2)
-        {
-            Lose();
-        }
-        if (blockNumbers[2, 0] == 2 && blockNumbers[2, 1] == 2 && blockNumbers[2, 2] == 2)
-        {
-            Lose();
+            currentGameState = GameState.Win;
         }
 
-        if (blockNumbers[0, 0] == 1 && blockNumbers[1, 0] == 1 && blockNumbers[2, 0] == 1)
+        if (blockManagersList[0].symbolNum == 2 && blockManagersList[1].symbolNum == 2 && blockManagersList[2].symbolNum == 2)
         {
-            Win();
+            currentGameState = GameState.Lose;
+
         }
-        if (blockNumbers[0, 1] == 1 && blockNumbers[1, 1] == 1 && blockNumbers[2, 1] == 1)
+        if (blockManagersList[3].symbolNum == 2 && blockManagersList[4].symbolNum == 2 && blockManagersList[5].symbolNum == 2)
         {
-            Win();
+            currentGameState = GameState.Lose;
         }
-        if (blockNumbers[0, 2] == 1 && blockNumbers[1, 2] == 1 && blockNumbers[2, 2] == 1)
+        if (blockManagersList[6].symbolNum == 2 && blockManagersList[7].symbolNum == 2 && blockManagersList[8].symbolNum == 2)
         {
-            Win();
-        }
-        if (blockNumbers[0, 0] == 2 && blockNumbers[1, 0] == 2 && blockNumbers[2, 0] == 2)
-        {
-            Lose();
-        }
-        if (blockNumbers[0, 1] == 2 && blockNumbers[1, 1] == 2 && blockNumbers[2, 1] == 2)
-        {
-            Lose();
-        }
-        if (blockNumbers[0, 2] == 2 && blockNumbers[1, 2] == 2 && blockNumbers[2, 2] == 2)
-        {
-            Lose();
+            currentGameState = GameState.Lose;
         }
 
-        if (blockNumbers[0, 0] == 1 && blockNumbers[1, 1] == 1 && blockNumbers[2, 2] == 1)
+        //縦がそろうパターン
+        if (blockManagersList[0].symbolNum == 1 && blockManagersList[3].symbolNum == 1 && blockManagersList[6].symbolNum == 1)
         {
-            Win();
+            currentGameState = GameState.Win;
         }
-        if (blockNumbers[1, 2] == 1 && blockNumbers[1, 1] == 1 && blockNumbers[2, 1] == 1)
+        if (blockManagersList[1].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[7].symbolNum == 1)
         {
-            Win();
+            currentGameState = GameState.Win;
         }
-        if (blockNumbers[0, 0] == 2 && blockNumbers[1, 1] == 2 && blockNumbers[2, 2] == 2)
+        if (blockManagersList[2].symbolNum == 1 && blockManagersList[5].symbolNum == 1 && blockManagersList[8].symbolNum == 1)
         {
-            Lose();
+            currentGameState = GameState.Win;
         }
-        if (blockNumbers[1, 2] == 2 && blockNumbers[1, 1] == 2 && blockNumbers[2, 1] == 2)
+
+        if (blockManagersList[0].symbolNum == 2 && blockManagersList[3].symbolNum == 2 && blockManagersList[6].symbolNum == 2)
         {
-            Lose();
+            currentGameState = GameState.Lose;
+
         }
+        if (blockManagersList[1].symbolNum == 2 && blockManagersList[4].symbolNum == 2 && blockManagersList[7].symbolNum == 2)
+        {
+            currentGameState = GameState.Lose;
+        }
+        if (blockManagersList[2].symbolNum == 2 && blockManagersList[5].symbolNum == 2 && blockManagersList[8].symbolNum == 2)
+        {
+            currentGameState = GameState.Lose;
+        }
+
+        //斜めがそろうパターン
+        if (blockManagersList[0].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[8].symbolNum == 1)
+        {
+            currentGameState = GameState.Win;
+        }
+        if (blockManagersList[2].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[6].symbolNum == 1)
+        {
+            currentGameState = GameState.Win;
+        }
+
+        if (blockManagersList[0].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[8].symbolNum == 1)
+        {
+            currentGameState = GameState.Lose;
+        }
+        if (blockManagersList[2].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[6].symbolNum == 1)
+        {
+            currentGameState = GameState.Lose;
+        }
+
+        UpdateResultDisplay();
 
     }
 
-    public void Win()
+
+    public void UpdateResultDisplay()
     {
-        txtMyResult.text = "勝ち";
-        txtOpponentResult.text = "負け";
-    }
-    
-    public void Lose()
-    {
-        txtMyResult.text = "負け";
-        txtOpponentResult.text = "勝ち";
+        if (currentGameState == GameState.Win)
+        {
+            txtMyResult.text = "勝ち";
+            txtOpponentResult.text = "負け";
+        }
+        if (currentGameState == GameState.Lose)
+        {
+            txtMyResult.text = "負け";
+            txtOpponentResult.text = "勝ち";
+        }
     }
 }
