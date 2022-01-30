@@ -3,5 +3,6 @@ public enum GameState
 {
     Play,
     Win,
-    Lose
+    Lose,
+    Draw
 }

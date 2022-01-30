@@ -2,26 +2,33 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UniRx;
 
 public class GameManager : MonoBehaviour
 {
-    //勝敗の結果表示
-    public Text txtMyResult, txtOpponentResult;
 
     public BlockManager blockManager;
-    public Transform[] blockTrans;
+
+    public Transform blockTran;
 
     public List<BlockManager> blockManagersList = new List<BlockManager>();
 
     public GameState currentGameState;
 
+    private int gridCount = 9;
+
+    public int writeCount;
+
+    [SerializeField]
+    private UIManager uiManager;
+
     void Start()
     {
         //ボタンを9つ生成してそれぞれのボタンに０～８の番号を割り当てる
-        for (int i = 0; i < blockTrans.Length; i++)
+        for (int i = 0; i < gridCount; i++)
         {
             //ブロックを生成
-            BlockManager block = Instantiate(blockManager, blockTrans[i]);
+            BlockManager block = Instantiate(blockManager, blockTran);
 
             //生成したブロックを順番にリストに追加
             blockManagersList.Add(block);
@@ -30,14 +37,46 @@ public class GameManager : MonoBehaviour
 
             //ブロックに番号を与える
             block.blockNum = i;
+
+            blockManagersList[i].ButtonReactiveProperty.DistinctUntilChanged().Where(x => x == true).Subscribe(_ => WriteMaruBatu(block));
+
+
         }
     }
 
+    /// <summary>
+    /// 自分が〇を書いた後、決着が着かなければ相手が×を書く
+    /// </summary>
+    /// <param name="blockManager"></param>
+    private void WriteMaruBatu(BlockManager blockManager)
+    {
+
+        if (JudgeWriting(blockManager.symbolNum) && currentGameState == GameState.Play)
+        {
+
+            uiManager.UpdateGrid(1, blockManager.blockNum);
+
+            JudgeResult();
+
+            if (AddWriteCount())
+            {
+                return;
+            }
+
+            OpponentTurn();
+        }
+    }
+
+    /// <summary>
+    /// 相手のターン
+    /// </summary>
     public void OpponentTurn()
     {
         if(currentGameState == GameState.Play)
         {
-            while (true)
+            int counter = 0;
+
+            while (true || counter < 10000)
             {
                 //ランダムに書き込むブロックを決める
                 int number = Random.Range(0, 9);
@@ -45,48 +84,34 @@ public class GameManager : MonoBehaviour
                 //決まった数字の場所に何も書かれていなかったら
                 if (JudgeWriting(blockManagersList[number].symbolNum))
                 {
-                    //×を書く
-                    Write(2, number);
+                    
+                    uiManager.UpdateGrid(2, number);
+                    JudgeResult();
 
                     break;
                 }
+
+                counter++;
+                
             }
         }
        
     }
 
-    //ブロックに〇×を書き込む
-    public void Write(int symbol, int blockNum)
-    {
-
-        //ブロックの記号の種類を決定（〇か×か）
-        blockManagersList[blockNum].symbolNum = symbol;
-
-        if (symbol == 1)
-        {
-            blockManagersList[blockNum].txtBlock.text = "〇";
-        }
-        if (symbol == 2)
-        {
-            blockManagersList[blockNum].txtBlock.text = "×";
-        }
-
-        JudgeResult();
-    }
-
-    //ブロックに書けるかどうかジャッジ
+    /// <summary>
+    /// ブロックに書けるかどうかジャッジ
+    /// </summary>
+    /// <param name="number"></param>
+    /// <returns></returns>
     public bool JudgeWriting(int number)
     {
-        //もし何も記号がなかったらtrueを返す
-        if (number == 0)
-        {
-            return true;
-        }
 
-        return false;
+        return number == 0 ? true : false;
     }
 
-    //勝ち負けのジャッジ
+    /// <summary>
+    /// 勝ち負けのジャッジ
+    /// </summary>
     public void JudgeResult()
     {
         //横がそろうパターン
@@ -155,31 +180,35 @@ public class GameManager : MonoBehaviour
             currentGameState = GameState.Win;
         }
 
-        if (blockManagersList[0].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[8].symbolNum == 1)
+        if (blockManagersList[0].symbolNum == 2 && blockManagersList[4].symbolNum == 2 && blockManagersList[8].symbolNum == 2)
         {
             currentGameState = GameState.Lose;
         }
-        if (blockManagersList[2].symbolNum == 1 && blockManagersList[4].symbolNum == 1 && blockManagersList[6].symbolNum == 1)
+        if (blockManagersList[2].symbolNum == 2 && blockManagersList[4].symbolNum == 2 && blockManagersList[6].symbolNum == 2)
         {
             currentGameState = GameState.Lose;
         }
 
-        UpdateResultDisplay();
+        uiManager.UpdateResultDisplay();
 
     }
 
-
-    public void UpdateResultDisplay()
+    /// <summary>
+    /// 〇を書いた数をカウントする
+    /// 5回目のターンで決着が着いてなければ引き分けとする
+    /// </summary>
+    /// <returns></returns>
+    public bool AddWriteCount()
     {
-        if (currentGameState == GameState.Win)
+        writeCount++;
+
+        if (writeCount > 4)
         {
-            txtMyResult.text = "勝ち";
-            txtOpponentResult.text = "負け";
+            uiManager.JudgeDraw();
+
+            return true;
         }
-        if (currentGameState == GameState.Lose)
-        {
-            txtMyResult.text = "負け";
-            txtOpponentResult.text = "勝ち";
-        }
+
+        return false;
     }
 }

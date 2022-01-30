@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UniRx;
 
 public class BlockManager : MonoBehaviour
 {
@@ -14,26 +15,23 @@ public class BlockManager : MonoBehaviour
     //0はなし、1は〇、2は×
     public int symbolNum;
 
+    public ReactiveProperty<bool> ButtonReactiveProperty = new ReactiveProperty<bool>(false);
+
     //ボタンの初期設定
     public void SetUpButton(GameManager gameManager)
     {
+        Button btnGrid = GetComponent<Button>();
+
         this.gameManager = gameManager;
 
         txtBlock.text = "";
 
+        btnGrid.onClick.AddListener(OnClickGrid);
+
     }
 
-    //自分のターン
-    public void OnClickMyTurn()
+    public void OnClickGrid()
     {
-        //そのブロックに何も書かれていないとき
-        if (gameManager.JudgeWriting(symbolNum) && gameManager.currentGameState == GameState.Play)
-        {
-            //ブロックに〇を書く
-            gameManager.Write(1,blockNum);
-
-            //相手のターン
-            gameManager.OpponentTurn();
-        }
+        ButtonReactiveProperty.Value = true;
     }
 }
